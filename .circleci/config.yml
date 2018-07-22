@@ -1,0 +1,61 @@
+# Javascript Node CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-javascript/ for more details
+#
+version: 2
+jobs:
+  build:
+    working_directory: ~/repo
+    docker:
+      - image: circleci/node:8.11
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package.json" }}
+            # fallback to using the latest cache if no exact match is found 
+            - v1-dependencies-
+
+      - run: yarn install
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+
+      - run: yarn check
+
+  deploy:
+    working_directory: ~/repo
+    docker:
+      - image: circleci/node:8.11
+    environment:
+      - SOURCE_BRANCH: master
+      - TARGET_BRANCH: gh-pages
+      - GITHUB_EMAIL: circleci@gh-pages.com
+      - GITHUB_NAME: CircleCI
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - 07:c2:6e:3a:d1:1b:59:3e:ed:4a:7b:2e:38:c3:d2:1e
+      - run: 
+          name: Deploy GitHub
+          command: bash .circleci/deploy.sh
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: master
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master

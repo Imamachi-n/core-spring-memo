@@ -1,5 +1,5 @@
 module.exports = {
-    base: '/',
+    base: '/core-spring-memo',
     title: 'Core Spring Memo',
     description: 'Spring Framework 5.x / Spring Boot 2.x',
     dest: 'public',
@@ -20,7 +20,7 @@ module.exports = {
       lastUpdated: 'Last Updated',
   
       // Assumes GitHub. Can also be a full GitLab url.
-      repo: 'Imamachi-n/ngs-ninja',
+      repo: 'Imamachi-n/core-spring-memo',
       // Customising the header label
       // Defaults to "GitHub"/"GitLab"/"Bitbucket" depending on `themeConfig.repo`
       repoLabel: 'GitHub',
@@ -28,7 +28,7 @@ module.exports = {
       // Optional options for generating "Edit this page" link
   
       // if your docs are in a different repo from your main project:
-      docsRepo: 'Imamachi-n/ngs-ninja',
+      docsRepo: 'Imamachi-n/core-spring-memo',
       // if your docs are not at the root of the repo:
       docsDir: 'docs',
       // if your docs are in a specific branch (defaults to 'master'):
