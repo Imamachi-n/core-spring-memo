@@ -1,5 +1,5 @@
 module.exports = {
-    base: '/core-spring-memo',
+    base: '/core-spring-memo/',
     title: 'Core Spring Memo',
     description: 'Spring Framework 5.x / Spring Boot 2.x',
     dest: 'public',
