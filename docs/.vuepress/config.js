@@ -9,7 +9,8 @@ module.exports = {
       nav: [
         { text: 'Home', link: '/' },
         { text: 'このページについて', link: '/about/' },
-        { text: 'Contents', link: '/contents/' }
+        { text: 'Springメモ', link: '/contents/' },
+        { text: 'ハンズオン', link: '/handson/' }
       ],
     
       sidebar: {

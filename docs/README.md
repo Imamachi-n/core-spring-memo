@@ -1,8 +1,8 @@
 ---
 home: true
 heroImage: /hero.jpg
-actionText: このページについて →
-actionLink: /about/
+actionText: Springメモへ →
+actionLink: /contents/
 
 features:
 - title: Dependency Injection(DI)
