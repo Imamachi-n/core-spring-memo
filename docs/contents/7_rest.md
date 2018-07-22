@@ -297,7 +297,9 @@ Location: http://shop.spring.io/store/orders/123/items/abc
 ## 新規に登録されるデータのURLを定義する
 HTTP POSTメソッドへのレスポンスには、データに紐づくURLを生成する必要がある。`UriComponentsBuilder`のサブクラスである`ServletUriComponentBuilder`クラスを用いて、データに紐づくURLを生成する。
 
-いかに例を示す。
+Locationヘッダの編集には、前述した`ResponseEntity`を用い、戻り値を`ResponseEntity`にしてステータスコード201で返す。
+
+以下に例を示す。
 ```java
 @PostMapping("/orders/{id}/items")
 public ResponseEntity<Void> createItem(@PathVariable long id, @RequestBody Item newItem) {
@@ -310,15 +312,61 @@ public ResponseEntity<Void> createItem(@PathVariable long id, @RequestBody Item 
         .path("/{itemId}")
         .buildAndExpand(newItem.getId())
         .toUri();
-        
+
     // Explicitly create a 201 Created response
     return ResponseEntity.created(location).build();
 }
 ```
 
-## If you saw example Controller code, would you understand what it is doing? Could you tell if it was annotated correctly?
-## Do you need Spring MVC in your classpath?
-## What Spring Boot starter would you use for a Spring REST application?
+## HTTP DELETEメソッド：存在するリソースを削除する
+* 空のレスポンスを返す（ステータスコード204）。
+
+Request
+```
+DELETE /store/orders/123/items/abc
+Host: shop.spring.io
+Content-Length: 0
+```
+Response
+```
+HTTP/1.1 204 No Content
+Date: …
+Content-Length: 0
+```
+
+## 特定のURLに紐づくデータを削除する
+以下に例を示す。
+```java
+@DeleteMapping("/orders/{orderId}/items/{itemId}")
+@ResponseStatus(HttpStatus.NO_CONTENT) // 204
+public void deleteItem(@PathVariable long orderId,
+                       @PathVariable String itemId) {
+    orderService.findOrderById(orderId).deleteItem(itemId);
+}
+```
+
+## 入力チェックを行う場合
+Bean ValidationをModelクラスにつける。
+* @NotBlank
+* @Length
+* @Validated
+
+などなど。
+
+## サーバ連携時のクライアント側の作成（RestTemplate）
+リクエスト側の処理をSpringで書く方法。
+
+
+| HTTP Method | RestTemplate Method |
+| -- | -- |
+| DELETE | delete(String url, Object, urlVariables) |
+| GET | getForObject(String url, Class\<T\> responseType, Object, urlVariables) |
+| HEAD | headForHeaders(String url, Object, urlVariables) |
+| OPTIONS | optionsForAllow(String url, Object, urlVariables) |
+| POST | postForLocation(String url, Object request, Object, urlVariables) |
+|  | postForObject(String url, Object request, Class\<T\> responseType, Object, uriVariables) |
+| PUT | put(String url, Object request, Object, urlVariables) |
+
 
 ### [WIP] 積み残し課題
 * What does CRUD mean?
@@ -326,4 +374,5 @@ public ResponseEntity<Void> createItem(@PathVariable long id, @RequestBody Item 
 * What are safe REST operations?
 * What are idempotent operations? Why is idempotency important?
 * What is a stereotype annotation? What does that mean?
-* 
+*  Do you need Spring MVC in your classpath?
+* What Spring Boot starter would you use for a Spring REST application?
