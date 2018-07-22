@@ -1,4 +1,4 @@
-# Data Management: JDBC, Transactions, JPA, Spring Data
+# JDBC, Transactions, JPA, Spring Data
 
 ## [WIP] 積み残し課題
 * What is the difference between checked and unchecked exceptions?

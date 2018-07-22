@@ -1,4 +1,4 @@
-# Container, Dependency, and IOC
+# Springによるコンテナ管理, Dependency Injection
 ## Dependency Injectionとその利点
 Dependency Injection (DI)は「依存性の注入」と訳される。  
 必要なインスタンス（依存性）を**外から代入**することで、各モジュールが疎結合になるように設計する。  
