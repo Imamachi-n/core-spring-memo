@@ -356,7 +356,12 @@ Bean ValidationをModelクラスにつける。
 ## サーバ連携時のクライアント側の作成（RestTemplate）
 リクエスト側の処理をSpringで書く方法。
 
+RestTemplateクラスのインスタンスを用意。
+```java
+RestTemplate template = new RestTemplate();
+```
 
+下記のメソッドを使うだけ。
 | HTTP Method | RestTemplate Method |
 | -- | -- |
 | DELETE | delete(String url, Object, urlVariables) |
@@ -367,6 +372,56 @@ Bean ValidationをModelクラスにつける。
 |  | postForObject(String url, Object request, Class\<T\> responseType, Object, uriVariables) |
 | PUT | put(String url, Object request, Object, urlVariables) |
 
+具体的な例を以下に示す。
+```java
+RestTemplate template = new RestTemplate();
+String uri = "http://example.com/store/orders/{id}/items";
+
+// GET all order items for an existing order with ID 1:
+OrderItem[] items =
+template.getForObject(uri, OrderItem[].class, "1");
+
+// POST to create a new item
+OrderItem item = // create item object
+URI itemLocation = template.postForLocation(uri, item, "1");
+
+// PUT to update the item
+item.setAmount(2);
+template.put(itemLocation, item);
+
+// DELETE to remove that item again
+template.delete(itemLocation);
+```
+
+### レスポンスヘッダー・ボディへのアクセス
+以下に例を示す。
+```java
+String uri = "http://example.com/store/orders/{id}";
+
+// レスポンスの取得
+ResponseEntity<Order> response = restTemplate.getForEntity(uri, Order.class, "1");
+
+// レスポンスヘッダのチェック
+assert(response.getStatusCode().equals(HttpStatus.OK));
+
+long modified = entity.getHeaders().getLastModified();
+
+// レスポンスボディの取得
+Order order = response.getBody();
+```
+
+### リクエストの作成方法
+```java
+// POST with HTTP BASIC authentication
+RequestEntity<OrderItem> request = RequestEntity
+    .post(new URI(itemUrl))
+    .getHeaders().add(HttpHeaders.AUTHORIZATION, "Basic " + getBase64EncodedLoginData())
+    .accept(MediaType.APPLICATION_JSON)
+    .body(newItem);
+
+ResponseEntity<Void> response = restTemplate.exchange(request, Void.class);
+assert(response.getStatusCode().equals(HttpStatus.CREATED));
+```
 
 ### [WIP] 積み残し課題
 * What does CRUD mean?
