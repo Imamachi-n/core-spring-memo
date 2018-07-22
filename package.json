@@ -1,0 +1,14 @@
+{
+  "name": "core-spring",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Naoto Imamachi",
+  "license": "MIT",
+  "scripts": {
+    "docs:dev": "vuepress dev docs",
+    "docs:build": "vuepress build docs"
+  },
+  "devDependencies": {
+    "vuepress": "^0.12.0"
+  }
+}
