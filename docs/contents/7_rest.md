@@ -423,7 +423,7 @@ ResponseEntity<Void> response = restTemplate.exchange(request, Void.class);
 assert(response.getStatusCode().equals(HttpStatus.CREATED));
 ```
 
-### [WIP] 積み残し課題
+## [WIP] 積み残し課題
 * What does CRUD mean?
 * Is REST secure? What can you do to secure it?
 * What are safe REST operations?
