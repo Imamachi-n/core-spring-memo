@@ -1,4 +1,4 @@
-# Springによるコンテナ管理, Dependency Injection
+# Spring Conteiner, Dependency Injection
 ## Dependency Injectionとその利点
 Dependency Injection (DI)は「依存性の注入」と訳される。  
 必要なインスタンス（依存性）を**外から代入**することで、各モジュールが疎結合になるように設計する。  
@@ -240,13 +240,15 @@ public class TestInfrastructureConfig {
 }
 ```
 
+## 
+
+
+## [WIP] 積み残し課題
 * What is the concept of a “container” and what is its lifecycle?
 * How are you going to create a new instance of an ApplicationContext?
 * Can you describe the lifecycle of a Spring Bean in an ApplicationContext?
 * How are you going to create an ApplicationContext in an integration test test?
 * What is the preferred way to close an application context? Does Spring Boot do this for you?
-
-## [WIP] 積み残し課題
 * Dependency injection using annotations (@Component, @Autowired)?
 * Component scanning, Stereotypes and Meta-Annotations?
 * Scopes for Spring beans? What is the default scope?

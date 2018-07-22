@@ -11,7 +11,6 @@
 * How many advice types does Spring support. Can you name each one?
 * What are they used for?
 * Which two advices can you use if you would like to try and catch exceptions?
-
 * What do you have to do to enable the detection of the @Aspect annotation?
 * What does @EnableAspectJAutoProxy do?
 * If shown pointcut expressions, would you understand them?
