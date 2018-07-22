@@ -240,7 +240,48 @@ public class TestInfrastructureConfig {
 }
 ```
 
-## 
+## Beanのスコープ
+### Singletonスコープ
+デフォルトのスコープは`singleton`。
+```java
+@Bean
+@Scope(“singleton”)
+public AccountService accountService() {
+    return ...
+}
+```
+インスタンスが作られるのは１回きり。２回目は同じインスタンスが使い回される。
+```java
+AccountService service1 = (AccountService) context.getBean(“accountService”);
+AccountService service2 = (AccountService) context.getBean(“accountService”);
+assert service1 == service2; // True – same object
+```
+* Springアプリケーションは複数リクエストに対して、マルチスレッドで処理。
+* スレッドセーフでなければならない（Stateless・Immutable beans）。
+
+### Protptypeスコープ
+```java
+@Bean
+@Scope(“prototype”)
+public AccountService accountService() {
+    return …
+}
+```
+毎回新しいインスタンスが生成される。
+```java
+AccountService service1 = (AccountService) context.getBean(“accountService”);
+AccountService service2 = (AccountService) context.getBean(“accountService”);
+assert service1 != service2; // True – different objects
+```
+
+### Springのスコープ
+| スコープ名 | 説明 |
+| -- | -- |
+| singleton | １つのインスタンスが作られる |
+| prototype | 新しいインスタンスが毎回作られる |
+| session | 新しいインスタンスがユーザごとに１つ作られる |
+| request | 新しいインスタンスがリクエストごとに１つ作られる |
+
 
 
 ## [WIP] 積み残し課題
@@ -251,7 +292,6 @@ public class TestInfrastructureConfig {
 * What is the preferred way to close an application context? Does Spring Boot do this for you?
 * Dependency injection using annotations (@Component, @Autowired)?
 * Component scanning, Stereotypes and Meta-Annotations?
-* Scopes for Spring beans? What is the default scope?
 * Are beans lazily or eagerly instantiated by default? How do you alter this behavior?
 * What is a property source? How would you use @PropertySource?
 * What is a BeanFactoryPostProcessor and what is it used for? When is it invoked?
