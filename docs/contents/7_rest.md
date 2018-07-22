@@ -258,6 +258,9 @@ public void updateOrder(...) {
 ```
 
 ## 受け取ったリクエストデータをメッセージコンバータを用いてJavaオブジェクトに格納する
+HTTP PUTメソッドの場合、データの更新になるので、受け取ったリクエストデータを何らかの方法を用いて、Javaオブジェクトに格納する必要があります。
+
+Springでは、`@RequestBody`アノテーションによって、`content-type`からデータ型を自動的に判断し、Javaオブジェクトに格納してくれます。
 ```java
 @PutMapping("/orders/{id}")
 @ResponseStatus(HttpStatus.NO_CONTENT) // 204
@@ -268,14 +271,54 @@ public void updateOrder(@RequestBody Order updatedOrder,
 }
 ```
 
-## What does @PathVariable do?
-## What are the HTTP status return codes for a successful GET, POST, PUT or DELETE operation?
+## HTTP POSTメソッド：新しいリソースを作る
+* HTTPリクエストでデータにアクセスする。
+* 新しく作られたリソースに対して、Locationヘッダを生成する。
+* created （ステータスコード201）を返す。
+
+Request
+```
+POST /store/orders/123/items
+Host: shop.spring.io
+Content-Type: application/json
+{
+    "cost": 50.00,
+    "product": SKU9988, ...
+}
+```
+Response
+```
+HTTP/1.1 201 Created
+Date: ...
+Content-Length: 0
+Location: http://shop.spring.io/store/orders/123/items/abc
+```
+
+## 新規に登録されるデータのURLを定義する
+HTTP POSTメソッドへのレスポンスには、データに紐づくURLを生成する必要がある。`UriComponentsBuilder`のサブクラスである`ServletUriComponentBuilder`クラスを用いて、データに紐づくURLを生成する。
+
+いかに例を示す。
+```java
+@PostMapping("/orders/{id}/items")
+public ResponseEntity<Void> createItem(@PathVariable long id, @RequestBody Item newItem) {
+    // Add the new item to the order
+    orderService.findOrderById(id).addItem(newItem);
+
+    // Build the location URI of the new item
+    URI location = ServletUriComponentsBuilder
+        .fromCurrentRequestUri()
+        .path("/{itemId}")
+        .buildAndExpand(newItem.getId())
+        .toUri();
+        
+    // Explicitly create a 201 Created response
+    return ResponseEntity.created(location).build();
+}
+```
 
 ## If you saw example Controller code, would you understand what it is doing? Could you tell if it was annotated correctly?
 ## Do you need Spring MVC in your classpath?
 ## What Spring Boot starter would you use for a Spring REST application?
-## What are the advantages of the RestTemplate?
-## If you saw an example using RestTemplate would you understand what it is doing?
 
 ### [WIP] 積み残し課題
 * What does CRUD mean?
