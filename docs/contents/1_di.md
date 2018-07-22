@@ -7,6 +7,7 @@ Dependency Injection (DI)は「依存性の注入」と訳される。
 ![C001_DI](./imgs/C001_DI.png)
 
 DIを行うメリットとしては、
+* クラス間・Layer間を疎結合化できる。
 * Unitテストがしやすくなる（Testabilityの向上）
 * インスタンスの差し替えなどが可能となる（例えば、テスト時に開発系・テスト系・本番系のデータアクセスクラスを用意してDIしたり）。
 
@@ -50,8 +51,194 @@ DIを行う上で、インターフェイスの用意は必須と言える。
 ## Spring beansでインターフェイスの利用が推奨される理由
 Spring FrameworkではJDK Proxyがデフォルトとなっており、JDK ProxyによるProxy生成の前提条件として、インターフェースの実装があるため。
 
-## “application-context”の意味
+## application-contextとはSpringが管理するコンテナのこと
+SpringのConfigurationクラスやApplicationクラスをインスタンス化する（これらインスタンスのことをBeanと呼ぶ）と、SpringのコンテナであるApplicationContext下で管理される。
 
+![C009_1_DI.png](./imgs/C009_1_DI.png)
+
+Applicationクラスの例。
+```java
+public class TransferServiceImpl implements TransferService {
+    // Needed to perform moneytransfers between accounts
+    public TransferServiceImpl(AccountRepository ar) {
+        this.accountRepository = ar;
+    }
+}
+
+public class JdbcAccountRepository implements AccountRepository {
+    // Needed to load accounts from the database
+    public JdbcAccountRepository(DataSource ds) {
+        this.dataSource = ds;
+    }
+}
+```
+
+Configurationクラス（Configuration Instructions）の例。
+```java
+@Configuration
+public class ApplicationConfig{
+    @Bean
+    public TransferService transferService(){
+        return new TransferServiceImpl(accountRepository());
+    }
+
+    @Bean
+    public AccountRepository accountRepository(){
+        return new JdbcAccountRepository(dataSource());
+    }
+
+    @Bean
+    public DataSource dataSource(){
+        BasicDataSource dataSource = New BasicDataSource();
+        dataSource.setDriverClassName("org.postgresql.Driver");
+        dataSource.setUrl("jdbc:postgresql://localhost/transfer");
+        dataSource.setUsername("user");
+        dataSource.setPassword("password");
+        return dataSource;
+    }
+}
+```
+
+実行クラスの例。
+```java
+// Create the application from the configuration
+ApplicationContext context = 
+    SpringApplication.run( ApplicationConfig.class );
+
+// Look up the application service interface
+// "transferService"がBean IDとなる。
+TransferService service = 
+    context.getBean(“transferService”, TransferService.class);
+
+// Use the application
+service.transfer(new MonetaryAmount(“300.00”), “1”, “2”);
+```
+
+BeanへのアクセスはBean IDがユニークである場合に限り、以下のようにBean IDを省略できる（基本的に、Bean IDはユニークであるように設計するため、以下の書き方が一般的）。
+```java
+// No need for bean id if type is unique
+TransferService ts3 = context.getBean(TransferService.class);
+```
+
+### JUnitのテストクラス作成（DIしない場合の例）
+```java
+public class TransferServiceTests {
+
+    private TransferService service;
+
+    @BeforeEach
+    public void setUp() {
+        // Create the application from the configuration
+        ApplicationContext context =
+            SpringApplication.run( ApplicationConfig.class );
+
+        // Look up the application service interface
+        service = context.getBean(TransferService.class);
+    }
+
+    @Test public void moneyTransfer() {
+        Confirmation receipt =
+            service.transfer(new MonetaryAmount("300.00"), "1", "2"));
+
+        Assert.assertEquals("500.00", receipt.getNewBalance());
+    }
+}
+```
+
+## 複数ファイルからApplicationContextを作成する
+`@Configuration`アノテーションを付けたクラスは長くなりがちなので、分割しておくことができる。
+
+特定のConfigクラスを読み込むには、`@Import`アノテーションをつけて、読み込むクラス名を指定する。
+
+大元のConfigクラス。`ApplicationConfig`クラスと`WebConfig`クラスをインポートしている。
+```java
+@Configuration
+@Import({ApplicationConfig.class, WebConfig.class })
+public class InfrastructureConfig {
+    ...
+}
+```
+
+インポートされるConfigクラスたち。
+```java
+@Configuration
+public class ApplicationConfig {
+    ...
+}
+
+@Configuration
+public class WebConfig {
+    ...
+}
+```
+
+`Application` Beansと`Infrastructure` Beansを分離しておくのがBest Practices。
+
+![C010_1_DI.png](./imgs/C010_1_DI.png)
+
+以下に２つに分割する前の例を示す。
+
+```java
+@Configuration
+public class ApplicationConfig{
+    @Bean
+    public TransferService transferService(){
+        return new TransferServiceImpl(accountRepository());
+    }
+
+    @Bean
+    public AccountRepository accountRepository(){
+        return new JdbcAccountRepository(dataSource());
+    }
+------------------------------------------------------------------
+    @Bean
+    public DataSource dataSource(){
+        BasicDataSource dataSource = New BasicDataSource();
+        dataSource.setDriverClassName("org.postgresql.Driver");
+        dataSource.setUrl("jdbc:postgresql://localhost/transfer");
+        dataSource.setUsername("user");
+        dataSource.setPassword("password");
+        return dataSource;
+    }
+}
+```
+
+以下に分割後の例を示す。  
+`ApplicationConfig`クラス内のBeanは、インポート先の`TestInfrastructureConfig`クラスのDataSourceのBeanに依存している。
+
+DataSourceのBeanを使うために、`@Autowired`アノテーションを使って、別のconfigクラスのBeanを取得する（これをインジェクションという）。コンストラクタでインジェクションするのが普通。
+```java{4,6}
+@Configuration
+public class ApplicationConfig {
+
+    private final DataSource dataSource;
+
+    @Autowired
+    public ApplicationConfig(DataSource ds) {
+        this.dataSource = ds;
+    }
+
+    @Bean 
+    public TransferService transferService() {
+        return new TransferServiceImpl ( accountRepository() );
+    }
+
+    @Bean 
+    public AccountRepository accountRepository(DataSource dataSource) {
+        return new JdbcAccountRepository( dataSource );
+    }
+}
+```
+```java{2}
+@Configuration
+@Import(ApplicationConfig.class)
+public class TestInfrastructureConfig {
+    @Bean 
+    public DataSource dataSource() {
+        ...
+    }
+}
+```
 
 ## What is the concept of a “container” and what is its lifecycle?
 ## How are you going to create a new instance of an ApplicationContext?
