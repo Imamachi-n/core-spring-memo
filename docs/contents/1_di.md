@@ -207,6 +207,8 @@ public class ApplicationConfig{
 `ApplicationConfig`クラス内のBeanは、インポート先の`TestInfrastructureConfig`クラスのDataSourceのBeanに依存している。
 
 DataSourceのBeanを使うために、`@Autowired`アノテーションを使って、別のconfigクラスのBeanを取得する（これをインジェクションという）。コンストラクタでインジェクションするのが普通。
+
+ただし、configクラス内でコンストラクタが１つの場合、`@Autowired`アノテーションを省略することができる。
 ```java{4,6}
 @Configuration
 public class ApplicationConfig {
@@ -274,13 +276,209 @@ AccountService service2 = (AccountService) context.getBean(“accountService”)
 assert service1 != service2; // True – different objects
 ```
 
-### Springのスコープ
+### Spring側で用意されているスコープ
 | スコープ名 | 説明 |
 | -- | -- |
 | singleton | １つのインスタンスが作られる |
 | prototype | 新しいインスタンスが毎回作られる |
 | session | 新しいインスタンスがユーザごとに１つ作られる |
 | request | 新しいインスタンスがリクエストごとに１つ作られる |
+
+ほとんどの場合は、singleton。sessionを時々使う。他のスコープはまず使わない。
+
+prototypeの場合、Springのコンテナ管理外となる。その場合、生成されたBeanはJavaのガベージコレクション（GA）の対象となり、普通のJavaのインスタンスとして扱われる。
+
+## 環境設定（Environmentオブジェクトとして読み込み）の読み込み
+以下の順番で、環境設定を読み込む（外から変えられるものから読み込まれる）。
+1. Servlet Contextパラメータ（web.xml）
+2. JNDI (Java Naming and Directory Interface)
+3. JVMシステムプロパティ（java -Dxxx=yyy）
+4. OS環境変数（Cloudでよく使う）
+5. Javaプロパティファイル
+
+### 環境変数の読み込み例
+環境設定（app.properties）から取得した値を変数に格納して、引数として取る。
+```java
+@Configuration
+public class DbConfig {
+    
+    Environment env;
+    
+    @Autowired
+    public DbConfig(Environment env) {
+        this.env = env;
+    }
+
+    @Bean
+    public DataSource dataSource() {
+        BasicDataSource ds = new BasicDataSource();
+        ds.setDriverClassName( env.getProperty( "db.driver" ));
+        ds.setUrl( env.getProperty( "db.url" ));
+        ds.setUser( env.getProperty( "db.user" ));
+        ds.setPassword( env.getProperty( "db.password" ));
+        return ds;
+    }
+}
+```
+
+app.properties
+```
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql:localhost/transfer
+db.user=transfer-app
+db.password=secret45
+```
+
+Javaプロパティファイルを読み込むには、`@PropertySource`アノテーションを用いてファイルパスを指定する。
+```java
+@Configuration
+@PropertySource ( "classpath:/com/organization/config/app.properties" )
+@PropertySource ( "file:config/local.properties" )
+public class ApplicationConfig {
+    ...
+}
+```
+
+## 環境変数（プロパティ）にアクセスする
+`@Value`アノテーションを用いて、引数に値を代入することで、プロパティにアクセスすることもできる。Environmentオブジェクトをわざわざ用意する必要がなくなる。
+```java
+@Configuration
+public class DbConfig {
+    @Bean
+    public DataSource dataSource(
+            @Value("${db.driver}") String driver,
+            @Value("${db.url}") String url,
+            @Value("${db.user}") String user,
+            @Value("${db.password}") String pwd) {
+        BasicDataSource ds = new BasicDataSource();
+        ds.setDriverClassName(driver);
+        ds.setUrl(url);
+        ds.setUser(user);
+        ds.setPassword(pwd);
+        return ds;
+    }
+}
+```
+
+## 開発系・テスト系・本番系で環境変数（プロパティ）を変更する
+`${ENV}`を変数にして、複数のプロパティファイルに対応できる。
+```java
+@PropertySource ( "classpath:/com/acme/config/app-${ENV}.properties" )
+```
+
+開発系`app-dev.properties`
+```
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://localhost/transfer
+db.user=transfer-app
+db.password=secret45
+```
+
+テスト系`app-qa.properties`
+```
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://qa/transfer
+db.user=transfer-app
+db.password=secret88
+```
+
+本番系`app-prod.properties`
+```
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://prod/transfer
+db.user=transfer-app
+db.password=secret99
+```
+
+## プロファイルを用いてBeanをグループ化
+Beanをプロファイルでグループ化することができる。  
+グループに属していないBeanは**いつでも**使われる。
+
+![C011_1_DI.png](./imgs/C011_1_DI.png)
+
+`@Profile`でJava configクラスがどのグループに属するか決められる（メソッド単位で付けられる）。
+
+```java
+@Configuration
+@Profile("dev")
+public class DevConfig {
+@Bean
+public DataSource dataSource() {
+    EmbeddedDatabaseBuilder builder = new EmbeddedDatabaseBuilder();
+    return builder.setName("testdb")
+        .setType(EmbeddedDatabaseType.HSQL)
+        .addScript("classpath:/testdb/schema.db")
+        .addScript("classpath:/testdb/test-data.db").build();
+}
+```
+
+開発用と本番用で同じBean ID名・異なるメソッド名を付けて、`@Profile`アノテーションで開発用と本番用を使い分ける。
+```java
+@Configuration
+public class DataSourceConfig {
+    // 開発用
+    @Bean(name="dataSource")
+    @Profile("dev")
+    public DataSource dataSourceForDev() {
+        EmbeddedDatabaseBuilder builder = new EmbeddedDatabaseBuilder();
+        return builder.setName("testdb") ...
+    }
+
+    // 本番用
+    @Bean(name="dataSource")
+    @Profile("prod")
+    public DataSource dataSourceForProd() {
+        BasicDataSource dataSource = new BasicDataSource();
+        ...
+        return dataSource;
+    }
+```
+
+### 特定のプロファイル（グループ）から除外する
+`!`を付けてプロファイルを指定することで、そのプロファイルから除外することができる。以下の例では、`dev`以外でBeanが使われる。
+```java
+@Configuration
+@Profile("!dev")
+public class DevConfig {
+    …
+}
+```
+
+## プロファイルを有効化する方法
+### JVMシステムプロパティ
+```
+-Dspring.profiles.active=dev,jpa
+```
+
+### Java config
+```java
+System.setProperty("spring.profiles.active", "dev,jpa");
+SpringApplication.run(AppConfig.class);
+```
+
+### テスト時
+`@ActiveProfiles`アノテーションを使う。
+
+## プロパティファイルの選択（開発系・本番系）
+### 開発系
+開発用のプロパティファイル`dev.properties`を読み込む。  
+プロファイルは`dev`を使う。
+```java
+@Configuration
+@Profile(“dev”)
+@PropertySource ( “dev.properties” )
+class DevConfig { … }
+```
+
+### 本番系
+開発用のプロパティファイル`prod.properties`を読み込む。  
+プロファイルは`prod`を使う。
+```java
+@Configuration
+@Profile(“prod”)
+@PropertySource ( “prod.properties” )
+class ProdConfig { … }
+```
 
 
 
@@ -293,7 +491,6 @@ assert service1 != service2; // True – different objects
 * Dependency injection using annotations (@Component, @Autowired)?
 * Component scanning, Stereotypes and Meta-Annotations?
 * Are beans lazily or eagerly instantiated by default? How do you alter this behavior?
-* What is a property source? How would you use @PropertySource?
 * What is a BeanFactoryPostProcessor and what is it used for? When is it invoked?
 * Why would you define a static @Bean method?
 * What is a ProperySourcesPlaceholderConfigurer used for?
