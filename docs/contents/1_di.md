@@ -511,6 +511,12 @@ public class AnnotationConfig {
 
 ![C012_1_DI.png](./imgs/C012_1_DI.png)
 
+### Bean IDの定義
+1. Bean IDを明示的に記述
+2. メソッドの頭文字を小文字にしたBean IDになる
+
+2がほとんど。
+
 ## インジェクション（@Autowired）ができる箇所
 基本的に、コンストラクタでインジェクションする。
 ### 1.　コンストラクタインジェクション
@@ -519,6 +525,14 @@ public class AnnotationConfig {
 @Autowired
 public TransferServiceImpl(AccountRepository a) {
     this.accountRepository = a;
+}
+```
+
+#### @Value
+```java
+@Autowired
+public TransferServiceImpl(@Value("${daily.limit}") int max) {
+    this.maxTransfersPerDay = max;
 }
 ```
 
@@ -531,11 +545,25 @@ public void setAccountRepository(AccountRepository a) {
 }
 ```
 
+#### @Value
+```java
+@Autowired
+public void setDailyLimit(@Value("${daily.limit}") int max) {
+    this.maxTransfersPerDay = max;
+}
+```
+
 ### 3. フィールドインジェクション
 フィールド変数はプライベート変数であるため、単体テストがしにくい。
 ```java
 @Autowired
 private AccountRepository accountRepository;
+```
+
+#### @Value
+```java
+@Value("#{environment['daily.limit']}")
+int maxTransfersPerDay;
 ```
 
 #### 参考
@@ -576,6 +604,69 @@ public class JdbcAccountRepository implements AccountRepository {..}
 public class JpaAccountRepository implements AccountRepository {..}
 ```
 基本的に、Bean IDはユニークになるように設計する（上記の例はしょうがないにしても）。
+
+## Delayed Initialization
+基本的に、ApplicationContext（Springのコンテナ）が作成されたタイミングで、Beanが生成される。
+
+しかし、`@Lazy`アノテーションをつけると、最初に使われるタイミングでBeanが生成される（`ApplicationContext.getBean`メソッド実行時）。
+
+Beanが生成されるタイミングでSMTPサーバが起動していない場合
+```java
+@Lazy @Component
+public class MailService {
+    public MailService(@Value("smtp:...") String url) {
+        // connect to mail-server
+    }
+…
+}
+```
+
+まず使うことはない…。`@Lazy`を使っても起動が早くなるわけではない。
+
+## Javaコンフィグとアノテーションの比較
+基本的には、可能な限りアノテーションを利用して、それ以外をJavaコンフィグで記述する。
+### Javaコンフィグ
+```java
+@Configuration
+public class TransferConfiguration
+    @Bean(name="transferService")
+    @Scope("prototype")
+    @Profile("dev")
+    @Lazy(false)
+    public TransferService tsvc() {
+        return new TransferServiceImpl(accountRepository());
+    }
+}
+```
+
+### アノテーション
+```java
+@Component("transferService")
+@Scope("prototype")
+@Profile("dev")
+@Lazy(false)
+public class TransferServiceImpl implements TransferService {
+    @Autowired
+    public TransferServiceImpl (AccountRepository accRep) { … }
+}
+```
+
+### コンポーネントスキャン
+コンポーネントスキャンの範囲が多いと、起動時間が長くなる。そのため、スキャン対象の範囲はできるだけ小さくすることが重要。
+### 良くない例
+```java
+@ComponentScan ({"org", "com"})
+-------------------------------
+@ComponentScan ("com")
+```
+
+### 良い例
+```java
+@ComponentScan ("com.bank.app")
+-------------------------------
+@ComponentScan ({"com.bank.app.repository", "com.bank.app.service", "com.bank.app.controller"})
+```
+
 
 ## [WIP] 積み残し課題
 * What is the concept of a “container” and what is its lifecycle?
