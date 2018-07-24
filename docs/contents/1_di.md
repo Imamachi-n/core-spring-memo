@@ -398,7 +398,7 @@ Beanをプロファイルでグループ化することができる。
 
 `@Profile`でJava configクラスがどのグループに属するか決められる（メソッド単位で付けられる）。
 
-```java
+```java{2}
 @Configuration
 @Profile("dev")
 public class DevConfig {
@@ -413,7 +413,7 @@ public DataSource dataSource() {
 ```
 
 開発用と本番用で同じBean ID名・異なるメソッド名を付けて、`@Profile`アノテーションで開発用と本番用を使い分ける。
-```java
+```java{5,13}
 @Configuration
 public class DataSourceConfig {
     // 開発用
@@ -436,7 +436,7 @@ public class DataSourceConfig {
 
 ### 特定のプロファイル（グループ）から除外する
 `!`を付けてプロファイルを指定することで、そのプロファイルから除外することができる。以下の例では、`dev`以外でBeanが使われる。
-```java
+```java{2}
 @Configuration
 @Profile("!dev")
 public class DevConfig {
@@ -463,7 +463,7 @@ SpringApplication.run(AppConfig.class);
 ### 開発系
 開発用のプロパティファイル`dev.properties`を読み込む。  
 プロファイルは`dev`を使う。
-```java
+```java{2}
 @Configuration
 @Profile(“dev”)
 @PropertySource ( “dev.properties” )
@@ -473,14 +473,109 @@ class DevConfig { … }
 ### 本番系
 開発用のプロパティファイル`prod.properties`を読み込む。  
 プロファイルは`prod`を使う。
-```java
+```java{2}
 @Configuration
 @Profile(“prod”)
 @PropertySource ( “prod.properties” )
 class ProdConfig { … }
 ```
 
+## Spring Expression Language(SpEL)
+後回し(p.95)。
 
+## アノテーションによるBean設定方法
+これまでの説明では、`@Bean`アノテーションによりインジェクションするBeanをJavaコンフィグファイルにいちいち記述していた。
+
+実は、Beanにするクラスに`@Component`アノテーションを付け、Javaコンフィグクラスに`@ComponentScan`アノテーションをつけることによって`@Bean`を付ける必要がなくなる。
+
+このときのBean IDは、メソッド名になる（明示しない場合は）。
+
+```java
+@Component
+public class TransferServiceImpl implements TransferService {
+    @Autowired
+    public TransferServiceImpl(AccountRepository repo) {
+    this.accountRepository = repo;
+    }
+}
+```
+
+`com.bank`パッケージ以下にあるクラス（コンポーネント）をスキャンし、Beanを作る。
+```java
+@Configuration
+@ComponentScan("com.bank")
+public class AnnotationConfig {
+    // No bean definition needed any more
+}
+```
+
+![C012_1_DI.png](./imgs/C012_1_DI.png)
+
+## インジェクション（@Autowired）ができる箇所
+基本的に、コンストラクタでインジェクションする。
+### 1.　コンストラクタインジェクション
+循環参照するケースでは、コンストラクタではだめ（あまりない）。
+```java
+@Autowired
+public TransferServiceImpl(AccountRepository a) {
+    this.accountRepository = a;
+}
+```
+
+### 2. メソッド(Setter)インジェクション
+Immutableにできない。何度も値がセットされるリスクがある。
+```java
+@Autowired
+public void setAccountRepository(AccountRepository a) {
+    this.accountRepository = a;
+}
+```
+
+### 3. フィールドインジェクション
+フィールド変数はプライベート変数であるため、単体テストがしにくい。
+```java
+@Autowired
+private AccountRepository accountRepository;
+```
+
+#### 参考
+[http://olivergierke.de/2013/11/why-field-injection-is-evil/](http://olivergierke.de/2013/11/why-field-injection-is-evil/)
+
+## インジェクション対象が曖昧なケース
+```java
+@Component
+public class TransferServiceImpl implements TransferService {
+    @Autowired
+    public TransferServiceImpl(AccountRepository accountRepository) { … }
+}
+```
+以下のように、AccountRepositoryインターフェースを実装したクラスが２つある場合、どちらをインジェクションしたらいいか判断できないため、`NoSuchBeanDefinitionException`例外が発生する。
+```java
+@Component
+public class JpaAccountRepository implements AccountRepository {..}
+---------------------------------------------------------------------
+@Component
+public class JdbcAccountRepository implements AccountRepository {..}
+```
+
+### 解決策
+`@Qualifier`アノテーションを使い、インジェクション対象のBean IDを明示する。
+```java
+@Component("transferService")
+public class TransferServiceImpl implements TransferService {
+    @Autowired
+    public TransferServiceImpl( @Qualifier("jdbcAccountRepository")
+                                AccountRepository accountRepository) { … }
+}
+```
+```java
+@Component("jdbcAccountRepository")     // Bean ID
+public class JdbcAccountRepository implements AccountRepository {..}
+---------------------------------------------------------------------
+@Component("jpaAccountRepository")      // Bean ID
+public class JpaAccountRepository implements AccountRepository {..}
+```
+基本的に、Bean IDはユニークになるように設計する（上記の例はしょうがないにしても）。
 
 ## [WIP] 積み残し課題
 * What is the concept of a “container” and what is its lifecycle?
