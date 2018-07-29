@@ -423,6 +423,10 @@ ResponseEntity<Void> response = restTemplate.exchange(request, Void.class);
 assert(response.getStatusCode().equals(HttpStatus.CREATED));
 ```
 
+## Postman
+REST APIのデータを見るためのツール。  
+[POSTMAN](https://app.getpostman.com)
+
 ## [WIP] 積み残し課題
 * What does CRUD mean?
 * Is REST secure? What can you do to secure it?

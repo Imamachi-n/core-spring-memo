@@ -667,6 +667,73 @@ public class TransferServiceImpl implements TransferService {
 @ComponentScan ({"com.bank.app.repository", "com.bank.app.service", "com.bank.app.controller"})
 ```
 
+## DI後の初期化処理とBeanインスタンスを破棄する前の処理
+`@PostConstruct`アノテーションはDI後の初期化処理（メソッド）につける。すべてのDIが終わった後に呼ばれる。コンストラクタはDIのみに使い、その他の初期化処理はこのアノテーションを付けて行う。
+
+`@PreDestory`アノテーションは、Beanインスタンスが破棄される直前に呼ばれる。
+
+引数なし・戻り値なしでないと使えない。
+```java
+public class JdbcAccountRepository {
+    @PostConstruct
+    void populateCache() { }
+    
+    @PreDestroy
+    void flushCache() { }
+}
+```
+
+### @PostContruct
+Setterメソッドが呼ばれた後、実行される。
+```java
+public class JdbcAccountRepository {
+
+    private DataSource dataSource;
+    
+    @Autowired
+    public void setDataSource(DataSource dataSource){
+        this.dataSource = dataSource;
+    
+    }
+    @PostConstruct
+    public void populateCache(){
+        Connection conn = dataSource.getConnection(); 
+    }
+}
+```
+
+```
+Constructer called -> Setter called(setDataSource) -> PostConstructメソッド called(populateCache)
+```
+
+### @PreDestroy
+一般的には、アプリケーションが終了する際に呼ばれる（プロセスがKillされたかどうかは関係ない）。リソースの開放を行う。
+```java
+ConfigurableApplicationContext context = …;
+// Triggers call of all @PreDestroy annotated methods
+context.close();
+```
+`context.close()`が呼ばれる前の段階で、以下の`@PreDestory`アノテーションのついたメソッドが呼ばれる。
+```java
+public class JdbcAccountRepository {
+    @PreDestroy
+    public void flushCache() { … }
+    ...
+}
+```
+
+## ステレオタイプアノテーション
+`@Component`アノテーションの子アノテーションとして、いくつか別のアノテーションがある。いずれもコンポーネントスキャンの対象となる。
+
+```java
+@Service
+@Repository
+@Controller
+@RestController
+@Configuration
+```
+
+
 
 ## [WIP] 積み残し課題
 * What is the concept of a “container” and what is its lifecycle?
