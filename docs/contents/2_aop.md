@@ -1,5 +1,24 @@
 # Aspect oriented programming
 
+## AOPとは
+横断的関心事（Cross-cutting concerns）のモジュール化。横断的関心事とは、いろいろなところで必要な機能のことで、いつも同じように書く内容のもの。
+
+例えば、
+* ログ出力
+* セキュリティ
+* キャッシュ
+* トランザクション
+* 例外処理
+
+常にメソッドが呼び出される前にRoleに基づくセキュリティチェックが行われる、などのように`いつも`や`常に`がキーワードが使われる操作はAOPの対象となる。
+
+## AOPがなかったら
+ビジネスロジック内にログ出力やセキュリティチェックの処理が入り込み、コードが見にくくなる。
+* コードのもつれ（Code tangling）: 複数の処理が絡み合っている状態
+* コードの散らばり（Code scattering）: 同じ処理がいろいろな箇所に散らばっている状態
+
+
+
 ## [WIP] 積み残し課題
 * What is the concept of AOP? Which problem does it solve? What is a cross cutting concern?
 * Name three typical cross cutting concerns.

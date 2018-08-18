@@ -427,6 +427,8 @@ assert(response.getStatusCode().equals(HttpStatus.CREATED));
 REST APIのデータを見るためのツール。  
 [POSTMAN](https://app.getpostman.com)
 
+![Postman01.png](./imgs/Postman01.png)
+
 ## [WIP] 積み残し課題
 * What does CRUD mean?
 * Is REST secure? What can you do to secure it?

@@ -61,7 +61,8 @@ module.exports = {
           '5_mvc',
           '6_security',
           '7_rest',
-          '8_testing'
+          '8_testing',
+          '9_react'
         ]
       }
     ]
